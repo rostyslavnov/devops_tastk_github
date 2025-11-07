@@ -1,14 +1,12 @@
-# Linuxowy kontener z openjdk v17
-FROM openjdk:17-jdk-slim
-
-# Ustawianie workdira w kontenerze
+FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /app
+COPY pom.xml .
+RUN --mount=type=cache,target=/root/.m2 mvn -B -q -DskipTests dependency:go-offline
+COPY src ./src
+RUN --mount=type=cache,target=/root/.m2 mvn -B -q -DskipTests package spring-boot:repackage
 
-# Skopiowanie jarki z hosta do kontenera
-COPY target/demoWeb-0.0.1-SNAPSHOT.jar /app/demoWeb.jar
-
-# Wystawienie portu 8080
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY --from=build /app/target/*-SNAPSHOT.jar /app/app.jar
 EXPOSE 8080
-
-# Uruchomienie aplikacji spring-bootowej przy starcie kontenera
-ENTRYPOINT ["java", "-jar", "/app/demoWeb.jar"]
+ENTRYPOINT ["java","-jar","/app/app.jar"]
